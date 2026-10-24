@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from typing import Optional
 
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
@@ -19,3 +20,21 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+class CardResponse(BaseModel):
+    id: int
+    name: str
+    category: str
+    price: float
+    element_type: str
+    description: Optional[str] = ""
+    image_url: Optional[str] = ""
+    model_config = ConfigDict(from_attributes=True)
+
+class CardCreateRequest(BaseModel):
+    name: str
+    category: str
+    price: float
+    element_type: str = "fuego"
+    description: Optional[str] = ""
+    image_url: Optional[str] = ""

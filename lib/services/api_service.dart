@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import '../models/card_item.dart';
 
 class ApiService {
   // URL de producción en Vercel
@@ -136,6 +137,44 @@ class ApiService {
     } else {
       throw ApiException('Sesión expirada o no autorizada');
     }
+  }
+
+  /// Buscar cartas por nombre o categoría (GET /cards/search)
+  static Future<List<CardItem>> searchCards({String query = '', String? category}) async {
+    final queryParams = <String, String>{};
+    if (query.isNotEmpty) queryParams['q'] = query;
+    if (category != null && category.isNotEmpty && category != 'Todas') {
+      queryParams['category'] = category;
+    }
+
+    final uri = Uri.parse('$baseUrl/cards/search').replace(
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+    );
+
+    final response = await http.get(uri, headers: {'Content-Type': 'application/json'});
+
+    if (response.statusCode == 200) {
+      final List list = jsonDecode(response.body) as List;
+      return list.map((item) => CardItem.fromJson(item as Map<String, dynamic>)).toList();
+    } else {
+      throw ApiException('Error al buscar cartas en la base de datos');
+    }
+  }
+
+  /// Obtener categorías únicas de cartas
+  static Future<List<String>> getCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/cards/categories'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List list = jsonDecode(response.body) as List;
+        return list.map((item) => item.toString()).toList();
+      }
+    } catch (_) {}
+    return ['Legendaria', 'Épica', 'Rara', 'Especial'];
   }
 }
 

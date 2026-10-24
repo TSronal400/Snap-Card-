@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'models/user.dart';
+import 'models/card_item.dart';
 import 'services/api_service.dart';
 
 void main() {
@@ -1007,43 +1008,151 @@ class ScannerScreen extends StatelessWidget {
 // ====================================================================
 // 6. PANTALLA DE LUPA / BÚSQUEDA EXCLUSIVA
 // ====================================================================
-class SearchScreen extends StatelessWidget {
+class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
+
+  @override
+  State<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends State<SearchScreen> {
+  final TextEditingController searchController = TextEditingController();
+  List<CardItem> searchResults = [];
+  List<String> categories = ['Todas', 'Legendaria', 'Épica', 'Rara', 'Especial'];
+  String selectedCategory = 'Todas';
+  bool isLoading = false;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _performSearch();
+    _fetchCategories();
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final fetched = await ApiService.getCategories();
+      if (mounted && fetched.isNotEmpty) {
+        setState(() {
+          categories = ['Todas', ...fetched.where((c) => c != 'Todas')];
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _performSearch() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final results = await ApiService.searchCards(
+        query: searchController.text.trim(),
+        category: selectedCategory,
+      );
+      if (mounted) {
+        setState(() {
+          searchResults = results;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Error al conectar con la base de datos de cartas.';
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  IconData _getElementIcon(String elementType) {
+    switch (elementType.toLowerCase()) {
+      case 'fuego':
+        return Icons.local_fire_department;
+      case 'agua':
+        return Icons.water_drop;
+      case 'planta':
+        return Icons.forest;
+      case 'electrico':
+        return Icons.bolt;
+      case 'psiquico':
+        return Icons.auto_awesome;
+      default:
+        return Icons.style;
+    }
+  }
+
+  List<Color> _getElementColors(String elementType) {
+    switch (elementType.toLowerCase()) {
+      case 'fuego':
+        return const [Color(0xFFEA7022), Color(0xFF8A250F)];
+      case 'agua':
+        return const [Color(0xFF1685B8), Color(0xFF0B3A70)];
+      case 'planta':
+        return const [Color(0xFF3E9B4F), Color(0xFF174C2C)];
+      case 'electrico':
+        return const [Color(0xFFF4B82D), Color(0xFF9B5515)];
+      case 'psiquico':
+        return const [Color(0xFF7759B8), Color(0xFF281848)];
+      default:
+        return const [Color(0xFFDD59A4), Color(0xFF712A67)];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const AppHeader(),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             const Text(
-              'Búsqueda',
+              'Búsqueda en la BD',
               style: TextStyle(
                 color: Color(0xFFFFFAF3),
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -1,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             const Text(
-              'Encuentra cartas en la base de datos por nombre o categoría',
+              'Encuentra cartas filtrando por nombre o categoría',
               style: TextStyle(
                 color: Color.fromRGBO(255, 250, 243, 0.6),
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             TextField(
+              controller: searchController,
+              onChanged: (_) => _performSearch(),
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Buscar cartas...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                hintText: 'Buscar por nombre (ej: Charizard, Pikachu)...',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.35)),
                 prefixIcon: const Icon(Icons.search, color: Color(0xFFFFB13B)),
+                suffixIcon: searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.white54),
+                        onPressed: () {
+                          searchController.clear();
+                          _performSearch();
+                        },
+                      )
+                    : null,
                 filled: true,
                 fillColor: const Color(0xFF21120E),
                 border: OutlineInputBorder(
@@ -1052,15 +1161,165 @@ class SearchScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const Spacer(),
-            const Center(
-              child: Icon(
-                Icons.search,
-                size: 80,
-                color: Color(0xFF21120E),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: categories.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final cat = categories[index];
+                  final isSelected = selectedCategory == cat;
+                  return ChoiceChip(
+                    label: Text(cat),
+                    selected: isSelected,
+                    selectedColor: const Color(0xFFEA7424),
+                    backgroundColor: const Color(0xFF21120E),
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 12,
+                    ),
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          selectedCategory = cat;
+                        });
+                        _performSearch();
+                      }
+                    },
+                  );
+                },
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 18),
+            Expanded(
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Color(0xFFEA7424)),
+                    )
+                  : errorMessage != null
+                      ? Center(
+                          child: Text(
+                            errorMessage!,
+                            style: const TextStyle(color: Colors.redAccent),
+                          ),
+                        )
+                      : searchResults.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.search_off,
+                                    size: 64,
+                                    color: Colors.white.withOpacity(0.2),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No se encontraron cartas en la base de datos',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.5),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : GridView.builder(
+                              itemCount: searchResults.length,
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 14,
+                                mainAxisSpacing: 14,
+                                childAspectRatio: 0.70,
+                              ),
+                              itemBuilder: (context, index) {
+                                final card = searchResults[index];
+                                final colors = _getElementColors(card.elementType);
+                                final icon = _getElementIcon(card.elementType);
+
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: colors,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.12),
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withOpacity(0.3),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                '\$${card.price.toStringAsFixed(0)}',
+                                                style: const TextStyle(
+                                                  color: Color(0xFFFFD17A),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ),
+                                            Icon(
+                                              icon,
+                                              color: Colors.white.withOpacity(0.8),
+                                              size: 18,
+                                            ),
+                                          ],
+                                        ),
+                                        const Spacer(),
+                                        Center(
+                                          child: Icon(
+                                            icon,
+                                            size: 52,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          card.category.toUpperCase(),
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(0.7),
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          card.name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            height: 1.1,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+            ),
           ],
         ),
       ),
