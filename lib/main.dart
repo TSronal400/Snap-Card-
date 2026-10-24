@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'models/user.dart';
 import 'models/card_item.dart';
 import 'services/api_service.dart';
@@ -903,6 +904,7 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen> {
   bool isScanning = false;
+  final ImagePicker _picker = ImagePicker();
 
   Future<void> simulateScan(BuildContext context) async {
     setState(() => isScanning = true);
@@ -931,6 +933,85 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 Icon(Icons.auto_awesome, color: Color(0xFFFFB03B)),
                 SizedBox(width: 8),
                 Text('¡Carta Descubierta!', style: TextStyle(color: Color(0xFFFFFAF3))),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  scannedCard.name,
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Categoría: ${scannedCard.category}',
+                  style: const TextStyle(color: Color(0xFFFFC564), fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Valor de Mercado: \$${scannedCard.price.toStringAsFixed(2)} USD',
+                  style: const TextStyle(color: Colors.greenAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEA7424)),
+                child: const Text('Aceptar y Guardar'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isScanning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> realScan(BuildContext context) async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      if (image == null) return;
+
+      setState(() => isScanning = true);
+
+      final allCards = await ApiService.searchCards(query: '');
+      if (allCards.isEmpty) {
+        throw Exception('No hay cartas disponibles en el sistema');
+      }
+
+      allCards.shuffle();
+      final scannedCard = allCards.first;
+
+      final message = await ApiService.addCardToCollection(scannedCard.id);
+
+      if (!mounted) return;
+      setState(() => isScanning = false);
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF21120E),
+            title: const Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Color(0xFFFFB03B)),
+                SizedBox(width: 8),
+                Text('¡Carta Escaneada!', style: TextStyle(color: Color(0xFFFFFAF3))),
               ],
             ),
             content: Column(
@@ -1073,27 +1154,39 @@ class _ScannerScreenState extends State<ScannerScreen> {
             const Spacer(),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 52,
               child: FilledButton.icon(
-                onPressed: isScanning ? null : () => simulateScan(context),
-                icon: isScanning
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.center_focus_strong),
-                label: Text(
-                  isScanning ? 'Escaneando carta...' : 'Simular escaneo',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                  ),
+                onPressed: isScanning ? null : () => realScan(context),
+                icon: const Icon(Icons.camera_alt),
+                label: const Text(
+                  'Escanear (Cámara)',
+                  style: TextStyle(fontWeight: FontWeight.w800),
                 ),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFEC7624),
+                  backgroundColor: const Color(0xFFEA7424),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: isScanning ? null : () => simulateScan(context),
+                icon: const Icon(Icons.center_focus_strong),
+                label: const Text(
+                  'Simular escaneo',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFEA7424)),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
               ),
