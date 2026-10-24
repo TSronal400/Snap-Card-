@@ -20,4 +20,9 @@ class Settings(BaseSettings):
         if self.secret_key:
             self.jwt_secret_key = self.secret_key
 
+        # En Vercel Serverless, el sistema de archivos es de solo lectura excepto /tmp
+        if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+            if self.database_url == "sqlite:///./snapcard.db" or self.database_url.startswith("sqlite:///./"):
+                self.database_url = "sqlite:////tmp/snapcard.db"
+
 settings = Settings()
