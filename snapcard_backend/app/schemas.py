@@ -16,6 +16,10 @@ class UserResponse(BaseModel):
     email: EmailStr
     model_config = ConfigDict(from_attributes=True)
 
+class UserUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

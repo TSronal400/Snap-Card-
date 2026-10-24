@@ -139,6 +139,40 @@ class ApiService {
     }
   }
 
+  /// Actualizar perfil del usuario (PUT /me)
+  static Future<UserModel> updateProfile({required String name, required String email}) async {
+    final token = await getToken();
+    if (token == null) {
+      throw ApiException('No hay sesión activa');
+    }
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/me'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      final user = UserModel.fromJson(data as Map<String, dynamic>);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userDataKey, jsonEncode(user.toJson()));
+      return user;
+    } else {
+      final detail = data is Map && data.containsKey('detail')
+          ? data['detail'].toString()
+          : 'Error al actualizar el perfil';
+      throw ApiException(detail);
+    }
+  }
+
   /// Buscar cartas por nombre o categoría (GET /cards/search)
   static Future<List<CardItem>> searchCards({String query = '', String? category}) async {
     final queryParams = <String, String>{};

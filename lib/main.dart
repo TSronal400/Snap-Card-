@@ -1344,7 +1344,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   final List<_ChatMessage> messages = [
     _ChatMessage(
       text:
-          'Hola Coleccionista. ¿En qué te puedo ayudar hoy? Puedo analizar el valor estimado de tu Charizard, orientarte sobre precios de mercado o darte consejos de autenticidad para tu colección.',
+          'Hola Coleccionista. ¿En me te puedo ayudar hoy? Puedo analizar el valor estimado de tu Charizard o sugerirte nuevas cartas.',
       isUser: false,
     ),
   ];
@@ -1414,7 +1414,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const AppHeader(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 28),
             const Row(
               children: [
                 Icon(Icons.auto_awesome, color: Color(0xFFFFB03B), size: 28),
@@ -1423,22 +1423,22 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                   'Asistente IA Snap',
                   style: TextStyle(
                     color: Color(0xFFFFFAF3),
-                    fontSize: 26,
+                    fontSize: 28,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             const Text(
               'Consulta precios del mercado, autenticidad y consejos para tu colección',
               style: TextStyle(
                 color: Color.fromRGBO(255, 250, 243, 0.6),
-                fontSize: 13,
+                fontSize: 14,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Expanded(
               child: ListView.builder(
                 controller: scrollController,
@@ -1716,9 +1716,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          const ProfileOption(
+          ProfileOption(
             icon: Icons.edit_outlined,
             title: 'Editar perfil',
+            onTap: () async {
+              final updated = await Navigator.push<UserModel>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileScreen(user: currentUser),
+                ),
+              );
+              if (updated != null) {
+                setState(() {
+                  currentUser = updated;
+                });
+              }
+            },
           ),
           const ProfileOption(
             icon: Icons.notifications_outlined,
@@ -1815,11 +1828,13 @@ class ProfileStat extends StatelessWidget {
 class ProfileOption extends StatelessWidget {
   final IconData icon;
   final String title;
+  final VoidCallback? onTap;
 
   const ProfileOption({
     super.key,
     required this.icon,
     required this.title,
+    this.onTap,
   });
 
   @override
@@ -1845,7 +1860,177 @@ class ProfileOption extends StatelessWidget {
           Icons.chevron_right,
           color: Colors.white54,
         ),
-        onTap: () {},
+        onTap: onTap ?? () {},
+      ),
+    );
+  }
+}
+
+// ====================================================================
+// PANTALLA DE EDITAR PERFIL
+// ====================================================================
+class EditProfileScreen extends StatefulWidget {
+  final UserModel? user;
+  const EditProfileScreen({super.key, this.user});
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  late final TextEditingController nameController;
+  late final TextEditingController emailController;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: widget.user?.name ?? '');
+    emailController = TextEditingController(text: widget.user?.email ?? '');
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    final name = nameController.text.trim();
+    final email = emailController.text.trim();
+
+    if (name.isEmpty || email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor completa todos los campos'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final updatedUser = await ApiService.updateProfile(name: name, email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Perfil actualizado con éxito!'),
+          backgroundColor: Color(0xFFEA7424),
+        ),
+      );
+      Navigator.pop(context, updatedUser);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF160B08),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Editar Perfil', style: TextStyle(color: Color(0xFFFFFAF3))),
+        iconTheme: const IconThemeData(color: Color(0xFFFFFAF3)),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ACTUALIZA TUS DATOS',
+                style: TextStyle(
+                  color: Color(0xFFFFC564),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: nameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Nombre de Coleccionista',
+                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: const Color(0xFF22110C),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Correo electrónico',
+                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: const Color(0xFF22110C),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton(
+                  onPressed: isLoading ? null : _saveProfile,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFEA7424),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Text(
+                          'Guardar cambios',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
