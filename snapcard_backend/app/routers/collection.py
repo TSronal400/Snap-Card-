@@ -11,7 +11,6 @@ router = APIRouter(prefix="/collection", tags=["Colección de Usuario"])
 
 @router.get("", response_model=List[CardResponse])
 def get_user_collection(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Obtener IDs de cartas en la colección del usuario
     collection_items = db.scalars(select(UserCollection).where(UserCollection.user_id == user.id)).all()
     card_ids = [item.card_id for item in collection_items]
 
@@ -31,7 +30,6 @@ def add_card_to_collection(data: dict, user: User = Depends(get_current_user), d
     if not card:
         raise HTTPException(status_code=404, detail="Carta no encontrada en la base de datos")
 
-    # Verificar si ya la tiene
     existing = db.scalar(
         select(UserCollection).where(
             UserCollection.user_id == user.id,
@@ -45,3 +43,18 @@ def add_card_to_collection(data: dict, user: User = Depends(get_current_user), d
     db.add(item)
     db.commit()
     return {"message": "¡Carta añadida a tu colección con éxito!", "card_id": card.id, "card_name": card.name}
+
+@router.delete("/{card_id}", status_code=status.HTTP_200_OK)
+def remove_card_from_collection(card_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    item = db.scalar(
+        select(UserCollection).where(
+            UserCollection.user_id == user.id,
+            UserCollection.card_id == card_id
+        )
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="La carta no está en tu colección")
+
+    db.delete(item)
+    db.commit()
+    return {"message": "Carta eliminada de la colección con éxito"}

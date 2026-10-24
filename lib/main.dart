@@ -612,6 +612,54 @@ class _CollectionScreenState extends State<CollectionScreen> {
 
   double get totalPrice => collection.fold(0, (sum, c) => sum + c.price);
 
+  void _confirmDeleteCard(CardItem card) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF21120E),
+          title: const Text('Eliminar Carta', style: TextStyle(color: Color(0xFFFFFAF3))),
+          content: Text(
+            '¿Estás seguro de que deseas eliminar "${card.name}" de tu colección?',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  await ApiService.removeCardFromCollection(card.id);
+                  _loadCollection();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Carta eliminada de la colección'),
+                      backgroundColor: Color(0xFFEA7424),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              },
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   IconData _getElementIcon(String elementType) {
     switch (elementType.toLowerCase()) {
       case 'fuego':
@@ -799,7 +847,10 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                             ),
                                           ),
                                         ),
-                                        Icon(icon, color: Colors.white70, size: 16),
+                                        GestureDetector(
+                                          onTap: () => _confirmDeleteCard(card),
+                                          child: Icon(Icons.delete_outline, color: Colors.white.withOpacity(0.8), size: 18),
+                                        ),
                                       ],
                                     ),
                                     const Spacer(),

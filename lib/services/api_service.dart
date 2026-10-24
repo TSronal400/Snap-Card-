@@ -289,6 +289,27 @@ class ApiService {
     }
   }
 
+  /// Eliminar carta de la colección del usuario (DELETE /collection/{cardId})
+  static Future<String> removeCardFromCollection(int cardId) async {
+    final token = await getToken();
+    if (token == null) throw ApiException('No hay sesión activa');
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/collection/$cardId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['message']?.toString() ?? 'Carta eliminada con éxito';
+    } else {
+      throw ApiException(data['detail']?.toString() ?? 'Error al eliminar carta');
+    }
+  }
+
   /// Obtener información de la app (GET /app/about)
   static Future<Map<String, dynamic>> getAppInfo() async {
     try {
