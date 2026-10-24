@@ -176,6 +176,22 @@ class ApiService {
     } catch (_) {}
     return ['Legendaria', 'Épica', 'Rara', 'Especial'];
   }
+
+  /// Consultar al Asistente IA (POST /ai/chat)
+  static Future<String> askAI(String message) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/ai/chat'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'message': message.trim()}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['reply'] as String? ?? 'No pude procesar tu consulta';
+    } else {
+      throw ApiException('Error al consultar al asistente IA');
+    }
+  }
 }
 
 class ApiException implements Exception {

@@ -1330,19 +1330,91 @@ class _SearchScreenState extends State<SearchScreen> {
 // ====================================================================
 // 7. PANTALLA DE IA INDEPENDIENTE (IA BOT)
 // ====================================================================
-class AIAssistantScreen extends StatelessWidget {
+class AIAssistantScreen extends StatefulWidget {
   const AIAssistantScreen({super.key});
+
+  @override
+  State<AIAssistantScreen> createState() => _AIAssistantScreenState();
+}
+
+class _AIAssistantScreenState extends State<AIAssistantScreen> {
+  final TextEditingController messageController = TextEditingController();
+  final ScrollController scrollController = ScrollController();
+
+  final List<_ChatMessage> messages = [
+    _ChatMessage(
+      text:
+          'Hola Coleccionista. ¿En qué te puedo ayudar hoy? Puedo analizar el valor estimado de tu Charizard, orientarte sobre precios de mercado o darte consejos de autenticidad para tu colección.',
+      isUser: false,
+    ),
+  ];
+
+  bool isLoading = false;
+
+  @override
+  void dispose() {
+    messageController.dispose();
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    final text = messageController.text.trim();
+    if (text.isEmpty || isLoading) return;
+
+    setState(() {
+      messages.add(_ChatMessage(text: text, isUser: true));
+      isLoading = true;
+    });
+
+    messageController.clear();
+    _scrollToBottom();
+
+    try {
+      final reply = await ApiService.askAI(text);
+      if (mounted) {
+        setState(() {
+          messages.add(_ChatMessage(text: reply, isUser: false));
+          isLoading = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          messages.add(_ChatMessage(
+            text: '⚠️ No se pudo conectar con el servidor de IA. Verifica tu conexión.',
+            isUser: false,
+          ));
+          isLoading = false;
+        });
+        _scrollToBottom();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const AppHeader(),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             const Row(
               children: [
                 Icon(Icons.auto_awesome, color: Color(0xFFFFB03B), size: 28),
@@ -1351,43 +1423,109 @@ class AIAssistantScreen extends StatelessWidget {
                   'Asistente IA Snap',
                   style: TextStyle(
                     color: Color(0xFFFFFAF3),
-                    fontSize: 28,
+                    fontSize: 26,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             const Text(
               'Consulta precios del mercado, autenticidad y consejos para tu colección',
               style: TextStyle(
                 color: Color.fromRGBO(255, 250, 243, 0.6),
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: const Color(0xFF21120E),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
-              ),
-              child: const Text(
-                'Hola Coleccionista. ¿En qué te puedo ayudar hoy? Puedo analizar el valor estimado de tu Charizard o sugerirte nuevas cartas.',
-                style: TextStyle(
-                  color: Color(0xFFFFFAF3),
-                  fontSize: 14,
-                  height: 1.4,
-                ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: messages.length + (isLoading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == messages.length && isLoading) {
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF21120E),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white.withOpacity(0.08)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFFFB03B),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'El asistente está pensando...',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final msg = messages[index];
+                  return Align(
+                    alignment:
+                        msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.all(16),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.82,
+                      ),
+                      decoration: BoxDecoration(
+                        color: msg.isUser
+                            ? const Color(0xFFEA7424)
+                            : const Color(0xFF21120E),
+                        borderRadius: BorderRadius.circular(18).copyWith(
+                          bottomRight: msg.isUser
+                              ? const Radius.circular(0)
+                              : const Radius.circular(18),
+                          bottomLeft: !msg.isUser
+                              ? const Radius.circular(0)
+                              : const Radius.circular(18),
+                        ),
+                        border: msg.isUser
+                            ? null
+                            : Border.all(color: Colors.white.withOpacity(0.08)),
+                      ),
+                      child: Text(
+                        msg.text,
+                        style: const TextStyle(
+                          color: Color(0xFFFFFAF3),
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
                   child: TextField(
+                    controller: messageController,
+                    onSubmitted: (_) => _sendMessage(),
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Pregunta sobre tus cartas...',
@@ -1401,7 +1539,7 @@ class AIAssistantScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Container(
                   height: 52,
                   width: 52,
@@ -1410,15 +1548,17 @@ class AIAssistantScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Procesando consulta con la IA...'),
-                          backgroundColor: Color(0xFFEA7424),
-                        ),
-                      );
-                    },
+                    icon: isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.send, color: Colors.white),
+                    onPressed: isLoading ? null : _sendMessage,
                   ),
                 ),
               ],
@@ -1428,6 +1568,16 @@ class AIAssistantScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ChatMessage {
+  final String text;
+  final bool isUser;
+
+  _ChatMessage({
+    required this.text,
+    required this.isUser,
+  });
 }
 
 // ====================================================================
