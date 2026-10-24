@@ -246,6 +246,49 @@ class ApiService {
     }
   }
 
+  /// Obtener colección de cartas del usuario (GET /collection)
+  static Future<List<CardItem>> getUserCollection() async {
+    final token = await getToken();
+    if (token == null) return [];
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/collection'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List list = jsonDecode(response.body) as List;
+      return list.map((item) => CardItem.fromJson(item as Map<String, dynamic>)).toList();
+    } else {
+      return [];
+    }
+  }
+
+  /// Añadir carta a la colección del usuario (POST /collection/add)
+  static Future<String> addCardToCollection(int cardId) async {
+    final token = await getToken();
+    if (token == null) throw ApiException('No hay sesión activa');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/collection/add'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'card_id': cardId}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return data['message']?.toString() ?? 'Carta añadida con éxito';
+    } else {
+      throw ApiException(data['detail']?.toString() ?? 'Error al añadir carta');
+    }
+  }
+
   /// Obtener información de la app (GET /app/about)
   static Future<Map<String, dynamic>> getAppInfo() async {
     try {

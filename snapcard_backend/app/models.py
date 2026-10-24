@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, String, Float, Text, Boolean
+from sqlalchemy import DateTime, String, Float, Text, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -25,6 +25,13 @@ class Card(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     image_url: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class UserCollection(Base):
+    __tablename__ = "user_collections"
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    card_id: Mapped[int] = mapped_column(Integer, index=True)
+    acquired_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class SupportTicket(Base):
     __tablename__ = "support_tickets"

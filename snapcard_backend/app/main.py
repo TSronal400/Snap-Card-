@@ -13,7 +13,7 @@ if backend_dir not in sys.path:
 from app.config import settings
 from app.database import Base, engine, SessionLocal
 from app import models  # registra los modelos antes de crear tablas
-from app.routers import auth, me, cards, ai, settings as settings_router
+from app.routers import auth, me, cards, ai, settings as settings_router, collection
 
 INITIAL_CARDS = [
     {
@@ -140,6 +140,7 @@ app.include_router(me.router)
 app.include_router(cards.router)
 app.include_router(ai.router)
 app.include_router(settings_router.router)
+app.include_router(collection.router)
 
 @app.get("/", tags=["Sistema"])
 def root():

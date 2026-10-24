@@ -578,56 +578,72 @@ class _SnapCardHomeState extends State<SnapCardHome> {
 // ====================================================================
 // 4. PANTALLA DE COLECCIÓN CON VALOR ACUMULADO
 // ====================================================================
-class CollectionScreen extends StatelessWidget {
+class CollectionScreen extends StatefulWidget {
   const CollectionScreen({super.key});
 
-  static const cards = [
-    CardData(
-      name: 'Charizard Fuego Divino',
-      category: 'Legendaria',
-      price: 350.00,
-      icon: Icons.local_fire_department,
-      colors: [Color(0xFFEA7022), Color(0xFF8A250F)],
-    ),
-    CardData(
-      name: 'Guardián del Mar',
-      category: 'Épica',
-      price: 85.50,
-      icon: Icons.water_drop,
-      colors: [Color(0xFF1685B8), Color(0xFF0B3A70)],
-    ),
-    CardData(
-      name: 'Bosque Antiguo',
-      category: 'Rara',
-      price: 25.00,
-      icon: Icons.forest,
-      colors: [Color(0xFF3E9B4F), Color(0xFF174C2C)],
-    ),
-    CardData(
-      name: 'Tormenta Eléctrica',
-      category: 'Épica',
-      price: 110.00,
-      icon: Icons.bolt,
-      colors: [Color(0xFFF4B82D), Color(0xFF9B5515)],
-    ),
-    CardData(
-      name: 'Sombra Nocturna',
-      category: 'Rara',
-      price: 45.00,
-      icon: Icons.nightlight_round,
-      colors: [Color(0xFF7759B8), Color(0xFF281848)],
-    ),
-    CardData(
-      name: 'Cristal Mágico',
-      category: 'Especial',
-      price: 190.00,
-      icon: Icons.diamond,
-      colors: [Color(0xFFDD59A4), Color(0xFF712A67)],
-    ),
-  ];
+  @override
+  State<CollectionScreen> createState() => _CollectionScreenState();
+}
 
-  double get totalPrice {
-    return cards.fold(0, (sum, card) => sum + card.price);
+class _CollectionScreenState extends State<CollectionScreen> {
+  List<CardItem> collection = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCollection();
+  }
+
+  Future<void> _loadCollection() async {
+    setState(() => isLoading = true);
+    try {
+      final items = await ApiService.getUserCollection();
+      if (mounted) {
+        setState(() {
+          collection = items;
+          isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  double get totalPrice => collection.fold(0, (sum, c) => sum + c.price);
+
+  IconData _getElementIcon(String elementType) {
+    switch (elementType.toLowerCase()) {
+      case 'fuego':
+        return Icons.local_fire_department;
+      case 'agua':
+        return Icons.water_drop;
+      case 'planta':
+        return Icons.forest;
+      case 'electrico':
+        return Icons.bolt;
+      case 'psiquico':
+        return Icons.auto_awesome;
+      default:
+        return Icons.style;
+    }
+  }
+
+  List<Color> _getElementColors(String elementType) {
+    switch (elementType.toLowerCase()) {
+      case 'fuego':
+        return const [Color(0xFFEA7022), Color(0xFF8A250F)];
+      case 'agua':
+        return const [Color(0xFF1685B8), Color(0xFF0B3A70)];
+      case 'planta':
+        return const [Color(0xFF3E9B4F), Color(0xFF174C2C)];
+      case 'electrico':
+        return const [Color(0xFFF4B82D), Color(0xFF9B5515)];
+      case 'psiquico':
+        return const [Color(0xFF7759B8), Color(0xFF281848)];
+      default:
+        return const [Color(0xFFDD59A4), Color(0xFF712A67)];
+    }
   }
 
   @override
@@ -648,13 +664,6 @@ class CollectionScreen extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFFFA33B).withOpacity(0.3)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Row(
                 children: [
@@ -699,170 +708,130 @@ class CollectionScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Mi colección',
-              style: TextStyle(
-                color: Color(0xFFFFFAF3),
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -1,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Mi colección',
+                  style: TextStyle(
+                    color: Color(0xFFFFFAF3),
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Color(0xFFFFB03B)),
+                  onPressed: _loadCollection,
+                ),
+              ],
             ),
             const SizedBox(height: 4),
-            const Text(
-              '6 de 120 cartas descubiertas',
-              style: TextStyle(
+            Text(
+              '${collection.length} cartas descubiertas',
+              style: const TextStyle(
                 color: Color.fromRGBO(255, 250, 243, 0.6),
                 fontSize: 13,
               ),
             ),
             const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: const LinearProgressIndicator(
-                value: 0.05,
-                minHeight: 8,
-                backgroundColor: Color(0xFF33201A),
-                valueColor: AlwaysStoppedAnimation(
-                  Color(0xFFEF812B),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = constraints.maxWidth > 600 ? 3 : 2;
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFEA7424)))
+                  : collection.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.style_outlined, size: 64, color: Colors.white.withOpacity(0.2)),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Aún no tienes cartas en tu colección.\n¡Usa el escáner para descubrir y añadir cartas!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          itemCount: collection.length,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: 0.70,
+                          ),
+                          itemBuilder: (context, index) {
+                            final card = collection[index];
+                            final colors = _getElementColors(card.elementType);
+                            final icon = _getElementIcon(card.elementType);
 
-                  return GridView.builder(
-                    itemCount: cards.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: 0.70,
-                    ),
-                    itemBuilder: (context, index) {
-                      return CollectionCard(
-                        card: cards[index],
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class CardData {
-  final String name;
-  final String category;
-  final double price;
-  final IconData icon;
-  final List<Color> colors;
-
-  const CardData({
-    required this.name,
-    required this.category,
-    required this.price,
-    required this.icon,
-    required this.colors,
-  });
-}
-
-class CollectionCard extends StatelessWidget {
-  final CardData card;
-
-  const CollectionCard({
-    super.key,
-    required this.card,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: card.colors,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.12),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: card.colors.last.withOpacity(0.4),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '\$${card.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      color: Color(0xFFFFD17A),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white.withOpacity(0.7),
-                  size: 16,
-                ),
-              ],
-            ),
-            const Spacer(),
-            Icon(
-              card.icon,
-              size: 58,
-              color: Colors.white,
-            ),
-            const Spacer(),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                card.category.toUpperCase(),
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                card.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  height: 1.1,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+                            return Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: colors,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.white.withOpacity(0.12)),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.3),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '\$${card.price.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              color: Color(0xFFFFD17A),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(icon, color: Colors.white70, size: 16),
+                                      ],
+                                    ),
+                                    const Spacer(),
+                                    Center(child: Icon(icon, size: 52, color: Colors.white)),
+                                    const Spacer(),
+                                    Text(
+                                      card.category.toUpperCase(),
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      card.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        height: 1.1,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
@@ -874,16 +843,90 @@ class CollectionCard extends StatelessWidget {
 // ====================================================================
 // 5. PANTALLA DEL ESCÁNER
 // ====================================================================
-class ScannerScreen extends StatelessWidget {
+class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
 
-  void simulateScan(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Carta detectada! Charizard (+ \$350 USD)'),
-        backgroundColor: Color(0xFFDC611B),
-      ),
-    );
+  @override
+  State<ScannerScreen> createState() => _ScannerScreenState();
+}
+
+class _ScannerScreenState extends State<ScannerScreen> {
+  bool isScanning = false;
+
+  Future<void> simulateScan(BuildContext context) async {
+    setState(() => isScanning = true);
+
+    try {
+      final allCards = await ApiService.searchCards(query: '');
+      if (allCards.isEmpty) {
+        throw Exception('No hay cartas disponibles en el sistema');
+      }
+
+      allCards.shuffle();
+      final scannedCard = allCards.first;
+
+      final message = await ApiService.addCardToCollection(scannedCard.id);
+
+      if (!mounted) return;
+      setState(() => isScanning = false);
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF21120E),
+            title: const Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Color(0xFFFFB03B)),
+                SizedBox(width: 8),
+                Text('¡Carta Descubierta!', style: TextStyle(color: Color(0xFFFFFAF3))),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  scannedCard.name,
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Categoría: ${scannedCard.category}',
+                  style: const TextStyle(color: Color(0xFFFFC564), fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Valor de Mercado: \$${scannedCard.price.toStringAsFixed(2)} USD',
+                  style: const TextStyle(color: Colors.greenAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEA7424)),
+                child: const Text('Aceptar y Guardar'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isScanning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -981,11 +1024,17 @@ class ScannerScreen extends StatelessWidget {
               width: double.infinity,
               height: 56,
               child: FilledButton.icon(
-                onPressed: () => simulateScan(context),
-                icon: const Icon(Icons.center_focus_strong),
-                label: const Text(
-                  'Simular escaneo',
-                  style: TextStyle(
+                onPressed: isScanning ? null : () => simulateScan(context),
+                icon: isScanning
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.center_focus_strong),
+                label: Text(
+                  isScanning ? 'Escaneando carta...' : 'Simular escaneo',
+                  style: const TextStyle(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
