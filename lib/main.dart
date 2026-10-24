@@ -1117,32 +1117,32 @@ class _SearchScreenState extends State<SearchScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const AppHeader(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             const Text(
-              'Búsqueda en la BD',
+              'Búsqueda',
               style: TextStyle(
                 color: Color(0xFFFFFAF3),
-                fontSize: 28,
+                fontSize: 30,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -1,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             const Text(
-              'Encuentra cartas filtrando por nombre o categoría',
+              'Encuentra cartas en la base de datos por nombre o categoría',
               style: TextStyle(
                 color: Color.fromRGBO(255, 250, 243, 0.6),
-                fontSize: 13,
+                fontSize: 14,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 24),
             TextField(
               controller: searchController,
               onChanged: (_) => _performSearch(),
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Buscar por nombre (ej: Charizard, Pikachu)...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.35)),
+                hintText: 'Buscar cartas...',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                 prefixIcon: const Icon(Icons.search, color: Color(0xFFFFB13B)),
                 suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
