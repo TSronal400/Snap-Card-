@@ -1630,6 +1630,202 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openNotificationsDialog() {
+    bool pushNotif = true;
+    bool priceAlerts = true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF21120E),
+              title: const Text('Notificaciones', style: TextStyle(color: Color(0xFFFFFAF3))),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: const Text('Notificaciones push', style: TextStyle(color: Colors.white)),
+                    value: pushNotif,
+                    activeColor: const Color(0xFFEA7424),
+                    onChanged: (val) => setDialogState(() => pushNotif = val),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Alertas de precios de cartas', style: TextStyle(color: Colors.white)),
+                    value: priceAlerts,
+                    activeColor: const Color(0xFFEA7424),
+                    onChanged: (val) => setDialogState(() => priceAlerts = val),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cerrar', style: TextStyle(color: Color(0xFFFFB03B))),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openAppearanceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF21120E),
+          title: const Text('Apariencia', style: TextStyle(color: Color(0xFFFFFAF3))),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.dark_mode, color: Color(0xFFFFB03B)),
+                title: Text('Modo Oscuro (Activo)', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Aceptar', style: TextStyle(color: Color(0xFFFFB03B))),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openSupportDialog() {
+    final ticketController = TextEditingController();
+    bool isSending = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF21120E),
+              title: const Text('Ayuda y Soporte', style: TextStyle(color: Color(0xFFFFFAF3))),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '¿Tienes algún problema o duda? Envíanos tu mensaje y te contactaremos.',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: ticketController,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Escribe tu mensaje...',
+                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                      filled: true,
+                      fillColor: const Color(0xFF160B08),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+                ),
+                FilledButton(
+                  onPressed: isSending
+                      ? null
+                      : () async {
+                          final msg = ticketController.text.trim();
+                          if (msg.length < 5) return;
+                          setDialogState(() => isSending = true);
+                          try {
+                            await ApiService.submitSupportTicket(msg);
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('¡Mensaje enviado con éxito!'),
+                                backgroundColor: Color(0xFFEA7424),
+                              ),
+                            );
+                          } catch (e) {
+                            setDialogState(() => isSending = false);
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(e.toString()),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        },
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEA7424)),
+                  child: isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Enviar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openAboutDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFEA7424)),
+      ),
+    );
+
+    final info = await ApiService.getAppInfo();
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF21120E),
+          title: Text(info['app_name'] ?? 'SNAP CARD', style: const TextStyle(color: Color(0xFFFFFAF3))),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Versión: ${info['version'] ?? '1.0.0+1'}', style: const TextStyle(color: Color(0xFFFFB03B), fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text(info['description'] ?? '', style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+              const SizedBox(height: 14),
+              Text('Desarrollado por: ${info['developer'] ?? 'Ronal'}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cerrar', style: TextStyle(color: Color(0xFFFFB03B))),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -1733,21 +1929,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             },
           ),
-          const ProfileOption(
+          ProfileOption(
             icon: Icons.notifications_outlined,
             title: 'Notificaciones',
+            onTap: _openNotificationsDialog,
           ),
-          const ProfileOption(
+          ProfileOption(
             icon: Icons.palette_outlined,
             title: 'Apariencia',
+            onTap: _openAppearanceDialog,
           ),
-          const ProfileOption(
+          ProfileOption(
             icon: Icons.help_outline,
             title: 'Ayuda y soporte',
+            onTap: _openSupportDialog,
           ),
-          const ProfileOption(
+          ProfileOption(
             icon: Icons.info_outline,
             title: 'Acerca de SNAP CARD',
+            onTap: _openAboutDialog,
           ),
           const SizedBox(height: 16),
           SizedBox(

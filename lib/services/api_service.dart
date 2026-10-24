@@ -226,6 +226,45 @@ class ApiService {
       throw ApiException('Error al consultar al asistente IA');
     }
   }
+
+  /// Enviar ticket de soporte (POST /support/ticket)
+  static Future<void> submitSupportTicket(String message) async {
+    final token = await getToken();
+    if (token == null) throw ApiException('No hay sesión activa');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/support/ticket'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'message': message.trim()}),
+    );
+
+    if (response.statusCode != 201) {
+      throw ApiException('Error al enviar mensaje de soporte');
+    }
+  }
+
+  /// Obtener información de la app (GET /app/about)
+  static Future<Map<String, dynamic>> getAppInfo() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/app/about'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {
+      'app_name': 'SNAP CARD',
+      'version': '1.0.0+1',
+      'description': 'Aplicación profesional para coleccionistas de cartas TCG.',
+      'developer': 'Equipo Snap Card & Ronal',
+    };
+  }
 }
 
 class ApiException implements Exception {
