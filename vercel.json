@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "snapcard_backend/app/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "snapcard_backend/app/main.py"
+    }
+  ]
+}
