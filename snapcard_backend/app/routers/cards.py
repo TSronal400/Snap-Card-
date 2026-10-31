@@ -9,6 +9,15 @@ from app.services.tcgdex_service import search_tcgdex_cards
 
 router = APIRouter(prefix="/cards", tags=["Cartas"])
 
+@router.get("/tcgdex/search")
+def search_external_cards(q: str = Query(..., min_length=1)):
+    try:
+        return search_tcgdex_cards(q.strip())
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Error al consultar TCGdex: {str(e)}"
+        )
 @router.get("/search", response_model=List[CardResponse])
 def search_cards(
     q: Optional[str] = Query(None, description="Término de búsqueda por nombre o categoría"),
