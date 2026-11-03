@@ -5,19 +5,29 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Card
 from app.schemas import CardResponse, CardCreateRequest
-from app.services.tcgdex_service import search_tcgdex_cards
+import json
+from pathlib import Path
 
 router = APIRouter(prefix="/cards", tags=["Cartas"])
+# Cargar el catálogo local de TCGdex
+DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "cards.json"
+
+with open(DATA_FILE, "r", encoding="utf-8") as file:
+    TCGDEX_CARDS = json.load(file)
+
 
 @router.get("/tcgdex/search")
 def search_external_cards(q: str = Query(..., min_length=1)):
-    try:
-        return search_tcgdex_cards(q.strip())
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Error al consultar TCGdex: {str(e)}"
-        )
+    search_term = q.strip().casefold()
+
+    results = [
+        card for card in TCGDEX_CARDS
+        if search_term in card.get("name", "").casefold()
+        or search_term in card.get("id", "").casefold()
+    ]
+
+    return results[:50]
+
 @router.get("/search", response_model=List[CardResponse])
 def search_cards(
     q: Optional[str] = Query(None, description="Término de búsqueda por nombre o categoría"),
